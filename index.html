@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Classroom Designer</title>
+<meta name="theme-color" content="#2f43b8">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+  :root{--bg:#f4f5fb;--panel:#fff;--line:#dfe2ee;--ink:#1d2140;--muted:#6b7090;--accent:#2f43b8;--accent2:#e8ecff;--danger:#c0392b}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+  body{display:grid;grid-template-rows:auto 1fr;height:100dvh;overflow:hidden}
+  header{display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+  header h1{font-size:16px;margin:0 8px 0 0;color:var(--accent);white-space:nowrap}
+  header .spacer{flex:1}
+  button,.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:6px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
+  button:hover{background:var(--accent2)}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button.primary:hover{filter:brightness(1.1)}
+  button.danger{color:var(--danger)}
+  button:disabled{opacity:.4;cursor:default}
+  button.on{background:var(--accent2);border-color:var(--accent)}
+  #main{display:grid;grid-template-columns:240px 1fr 260px;min-height:0}
+  #palette,#props{background:var(--panel);overflow:auto;min-height:0}
+  #palette{border-right:1px solid var(--line);padding:8px}
+  #props{border-left:1px solid var(--line);padding:10px}
+  #palette input[type=search]{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:13px;margin-bottom:6px}
+  details.cat{border-bottom:1px solid var(--line)}
+  details.cat summary{font-weight:600;font-size:13px;padding:8px 2px;cursor:pointer;list-style:none}
+  details.cat summary::before{content:"▸ ";color:var(--muted)}
+  details.cat[open] summary::before{content:"▾ "}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding-bottom:8px}
+  .tile{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font-size:11px;text-align:center;line-height:1.15;touch-action:none;user-select:none}
+  .tile:hover{background:var(--accent2)}
+  .tile svg{width:56px;height:40px}
+  .tile small{color:var(--muted);font-size:10px}
+  #stage{position:relative;min-width:0;min-height:0;background:#e9ebf3}
+  #canvas{width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+  #zoombar{position:absolute;right:10px;bottom:10px;display:flex;gap:4px;background:#fffd;padding:4px;border-radius:10px;border:1px solid var(--line)}
+  #zoombar button{padding:5px 9px}
+  #hint{position:absolute;left:10px;bottom:10px;font-size:12px;color:var(--muted);background:#fffd;padding:6px 9px;border-radius:8px;border:1px solid var(--line);max-width:60%}
+  #props h2{font-size:14px;margin:4px 0 10px}
+  #props h3{font-size:12px;margin:14px 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .field{display:flex;flex-direction:column;gap:3px;margin-bottom:9px;font-size:12px;color:var(--muted)}
+  .field input,.field textarea,.field select{font:inherit;font-size:13px;color:var(--ink);padding:6px 8px;border:1px solid var(--line);border-radius:7px;width:100%;background:#fff}
+  .field textarea{resize:vertical;min-height:56px}
+  .row{display:flex;gap:6px;align-items:center}
+  .row>*{flex:1;min-width:0}
+  .row .unit{flex:0 0 auto;font-size:12px;color:var(--muted)}
+  .check{display:flex;gap:6px;align-items:center;font-size:13px;margin:6px 0}
+  .btns{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+  .muted{color:var(--muted);font-size:12px;line-height:1.4}
+  input[type=color]{height:34px;padding:2px}
+  #mobilebar{display:none}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1d2140;color:#fff;padding:9px 14px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:50}
+  .toast.show{opacity:1}
+  dialog{border:none;border-radius:14px;padding:18px;max-width:420px;width:92vw;box-shadow:0 10px 40px #0004}
+  dialog h2{margin:0 0 8px;font-size:17px}
+  dialog::backdrop{background:#0006}
+  @media (max-width:860px){
+    #main{grid-template-columns:1fr}
+    #palette,#props{position:fixed;left:0;right:0;bottom:0;max-height:55dvh;z-index:20;border:none;border-top:1px solid var(--line);box-shadow:0 -6px 24px #0002;transform:translateY(105%);transition:transform .2s;border-radius:14px 14px 0 0}
+    #palette.open,#props.open{transform:none}
+    #palette .grid{grid-template-columns:repeat(auto-fill,minmax(90px,1fr))}
+    #mobilebar{display:flex;position:absolute;left:10px;top:10px;gap:6px}
+    #hint{display:none}
+    header h1{font-size:14px}
+    header .hide-sm{display:none}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🏫 Classroom Designer</h1>
+  <button id="bUndo" title="Undo (Ctrl+Z)">↶ Undo</button>
+  <button id="bRedo" title="Redo (Ctrl+Y)">↷ Redo</button>
+  <button id="bLabel" title="Add a text label">🏷️ Text label</button>
+  <span class="spacer"></span>
+  <button id="bNew" class="hide-sm">New</button>
+  <button id="bOpen">Open</button>
+  <button id="bSave" title="Save layout file to reopen later">Save file</button>
+  <button id="bPng" class="hide-sm">Image</button>
+  <button id="bWord" class="primary">⬇ Word doc</button>
+  <input type="file" id="fileIn" accept=".json,application/json" hidden>
+</header>
+<div id="main">
+  <aside id="palette">
+    <input type="search" id="search" placeholder="Search furniture…">
+    <div id="cats"></div>
+    <p class="muted">Tap an item to drop it in the middle of the room, or drag it onto the floor plan.</p>
+  </aside>
+  <section id="stage">
+    <svg id="canvas" xmlns="http://www.w3.org/2000/svg">
+      <g id="lRoom"></g><g id="lItems"></g><g id="lSel"></g>
+    </svg>
+    <div id="mobilebar"><button id="bPal" class="primary">＋ Add</button><button id="bProps">⚙ Edit</button></div>
+    <div id="hint">Drag to move · corner ◢ to resize · ⟳ to rotate · drag empty space to pan · scroll / pinch to zoom</div>
+    <div id="zoombar">
+      <button id="bSnap" class="on" title="Snap to 1 inch grid">Snap</button>
+      <button id="bZoomOut">−</button><button id="bFit">Fit</button><button id="bZoomIn">＋</button>
+    </div>
+  </section>
+  <aside id="props"></aside>
+</div>
+<div class="toast" id="toast"></div>
+<dialog id="dlgNew">
+  <h2>Start a new classroom?</h2>
+  <p class="muted">Your current layout will be cleared. Use “Save file” first if you want to keep it.</p>
+  <div class="btns"><button id="dnBlank" class="primary">Blank room</button><button id="dnSample">Pre-K example</button><button id="dnCancel">Cancel</button></div>
+</dialog>
+
+<script src="docx.min.js"></script>
+<script>
+"use strict";
+/* ============ Catalog (sizes in inches: w × h, top-down) ============ */
+const C = {table:'#b9b4e0',chair:'#8f8ac9',storage:'#f2b25c',rug:'#2f43b8',soft:'#4a78db',kitchen:'#e7c06a',water:'#7cc6e8',room:'#9aa3ad',teacher:'#6f7491',green:'#5aa55a',art:'#ec8f6a',wood:'#c89b62',nap:'#a8d5b5'};
+const CATALOG = [
+ ['Tables & Seating',[
+  ['rect_60','Rectangle table 30×60','rect',60,30,C.table],
+  ['rect_48','Rectangle table 30×48','rect',48,30,C.table],
+  ['sq_30','Square table 30×30','rect',30,30,C.table],
+  ['round_36','Round table 36"','ellipse',36,36,C.table],
+  ['trap','Trapezoid table','trap',60,30,C.table],
+  ['halfmoon','Half-moon table','halfmoon',60,30,C.table],
+  ['kidney','Kidney table (small group)','kidney',60,36,C.table],
+  ['tableset','Table + 4 chairs','tableset',48,62,C.table],
+  ['tableset6','Table + 6 chairs','tableset6',72,62,C.table],
+  ['chair','Child chair','chair',14,14,C.chair],
+  ['tchair','Adult chair','chair',20,20,C.teacher],
+  ['sofa','Child sofa','sofa',48,24,C.soft],
+  ['armchair','Child armchair','sofa',24,22,C.soft],
+  ['beanbag','Beanbag','ellipse',30,30,C.soft],
+  ['floorcush','Floor cushion','rrect',18,18,C.soft],
+  ['stool','Wobble stool','ellipse',14,14,C.chair],
+ ]],
+ ['Storage & Shelves',[
+  ['cubbies','Cubbies (children)','cubby',48,15,C.storage],
+  ['coatlocker','Coat lockers','cubby',60,15,C.wood],
+  ['toteshelf','Tote shelf','shelf',48,15,C.storage],
+  ['lowshelf','Low shelf 36"','shelf',36,12,C.storage],
+  ['lowshelf48','Low shelf 48"','shelf',48,12,C.storage],
+  ['cornershelf','Corner shelf','quarter',24,24,C.storage],
+  ['bookshelf','Bookshelf','shelf',36,14,C.storage],
+  ['bookdisplay','Book display','bookdisplay',36,14,C.storage],
+  ['papers','Paper storage','shelf',24,14,C.storage],
+  ['cart','Rolling cart','rrect',18,14,C.storage],
+  ['cabinet','Teacher cabinet','shelf',36,18,C.teacher],
+  ['cotcart','Cot storage cart','rect',30,24,C.nap],
+ ]],
+ ['Learning Centers',[
+  ['blocks','Block shelf','shelf',48,15,C.wood],
+  ['easel','Double easel','easel',26,22,C.art],
+  ['dryrack','Art drying rack','rack',24,14,C.art],
+  ['sandwater','Sand & water table','sandwater',48,24,C.water],
+  ['lighttable','Light table','rrect',24,24,'#fff3a8'],
+  ['science','Science table','rect',48,24,C.green],
+  ['writing','Writing center desk','rect',36,24,C.storage],
+  ['listen','Listening center','listen',30,30,C.soft],
+  ['computer','Computer station','computer',30,20,C.teacher],
+  ['puppet','Puppet theater','puppet',36,12,C.art],
+  ['workbench','Woodworking bench','rect',36,18,C.wood],
+  ['music','Music shelf','shelf',36,12,'#d68fd6'],
+  ['plant','Plant / garden','plant',18,18,C.green],
+  ['pets','Class pet / aquarium','rect',24,12,C.water],
+ ]],
+ ['Dramatic Play',[
+  ['stove','Play stove','stove',24,14,C.kitchen],
+  ['psink','Play sink','sink',24,14,C.kitchen],
+  ['fridge','Play refrigerator','fridge',18,14,C.kitchen],
+  ['hutch','Play hutch','shelf',30,14,C.kitchen],
+  ['kitchenset','Play kitchen set','kitchenset',72,14,C.kitchen],
+  ['ptable','Play table + chairs','tableset',34,46,C.kitchen],
+  ['crib','Doll crib','crib',30,16,'#f2a0b8'],
+  ['highchair','Doll high chair','rect',14,14,'#f2a0b8'],
+  ['dressup','Dress-up storage','shelf',36,16,'#f2a0b8'],
+  ['mirror','Mirror','window',36,4,'#cfe8f5'],
+ ]],
+ ['Rugs & Areas',[
+  ['rug_big','Large group rug','rug',108,72,C.rug],
+  ['rug_round','Round rug','ellipse',96,96,C.rug],
+  ['rug_oval','Oval rug','ellipse',120,84,C.rug],
+  ['rug_small','Small rug','rug',60,36,'#6c7fe0'],
+  ['calm','Calm-down corner','nook',48,48,'#a7c7f2'],
+  ['cot','Nap cot','rrect',52,23,C.nap],
+  ['mat','Nap mat','rrect',48,24,C.nap],
+  ['zone','Area outline','zone',96,72,'#2f43b8'],
+ ]],
+ ['Room & Teacher',[
+  ['tdesk','Teacher desk','desk',60,30,C.teacher],
+  ['door','Door','door',36,36,'#b07a4a'],
+  ['window','Window','window',48,6,'#9fd3f0'],
+  ['sink','Classroom sink','sink',30,22,C.room],
+  ['fountain','Water fountain','sink',18,14,C.room],
+  ['whiteboard','Whiteboard','board',72,4,'#f7f7f7'],
+  ['smartboard','Smart board','board',72,6,'#3a3f5c'],
+  ['bulletin','Bulletin board','board',48,3,'#d9b27c'],
+  ['bathroom','Bathroom','zone',60,60,C.room],
+  ['trash','Trash can','ellipse',14,14,C.room],
+  ['wall','Wall section','rect',48,6,'#555b75'],
+  ['column','Column','rect',18,18,'#555b75'],
+ ]],
+ ['Basic Shapes',[
+  ['s_rect','Rectangle','rect',24,24,'#cccccc'],
+  ['s_rrect','Rounded box','rrect',24,24,'#cccccc'],
+  ['s_circle','Circle','ellipse',24,24,'#cccccc'],
+  ['s_tri','Triangle','tri',24,24,'#cccccc'],
+ ]],
+];
+const BYTYPE = {};
+CATALOG.forEach(([cat,list])=>list.forEach(([type,name,shape,w,h,color])=>BYTYPE[type]={type,name,shape,w,h,color,cat}));
+
+/* ============ State ============ */
+const STORE='classroomDesigner.v1';
+let state = blankState();
+let sel = null;            // selected id
+let view = {x:-48,y:-48,w:500,h:450};
+let snap = true;
+let hist=[],hpos=-1;
+function blankState(){return {name:'My Pre-K Classroom',teacher:'',notes:'',room:{w:360,h:336},items:[],nextId:1}}
+const byId = id => state.items.find(o=>o.id===id);
+
+/* ============ Helpers ============ */
+const $ = s=>document.querySelector(s);
+const esc = s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const r1 = n=>Math.round(n*10)/10;
+function fmtIn(n){n=Math.round(n);if(n<24)return n+'"';const f=Math.floor(n/12),i=n%12;return f+"'"+(i?' '+i+'"':'')}
+function shade(hex,amt){let c=hex.replace('#','');if(c.length===3)c=c.split('').map(x=>x+x).join('');let n=parseInt(c,16);let r=(n>>16)&255,g=(n>>8)&255,b=n&255;const f=v=>Math.max(0,Math.min(255,Math.round(amt<0?v*(1+amt):v+(255-v)*amt)));return '#'+[f(r),f(g),f(b)].map(v=>v.toString(16).padStart(2,'0')).join('')}
+function isDark(hex){let c=hex.replace('#','');if(c.length===3)c=c.split('').map(x=>x+x).join('');const n=parseInt(c,16);const r=(n>>16)&255,g=(n>>8)&255,b=n&255;return (0.299*r+0.587*g+0.114*b)<140}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),2200)}
+const FONT='Arial, Helvetica, sans-serif';
+
+/* ============ Shape drawing (local coords 0..w, 0..h) ============ */
+function drawShape(shape,w,h,fill){
+  const st=shade(fill,-0.45), sw=Math.max(0.6,Math.min(w,h)*0.03).toFixed(2);
+  const P=`fill="${fill}" stroke="${st}" stroke-width="${sw}"`;
+  const L=`stroke="${st}" stroke-width="${sw}" fill="none"`;
+  const lite=shade(fill,0.45), dark=shade(fill,-0.2);
+  const rr=Math.min(w,h)*0.15;
+  switch(shape){
+   case 'rect': return `<rect width="${w}" height="${h}" ${P}/>`;
+   case 'rrect': return `<rect width="${w}" height="${h}" rx="${rr}" ${P}/>`;
+   case 'ellipse': return `<ellipse cx="${w/2}" cy="${h/2}" rx="${w/2}" ry="${h/2}" ${P}/>`;
+   case 'tri': return `<path d="M${w/2} 0L${w} ${h}L0 ${h}Z" ${P}/>`;
+   case 'quarter': return `<path d="M0 0L${w} 0L0 ${h}Z" ${P}/><path d="M${w*.25} ${h*.25}L${w*.5} 0M${w*.25} ${h*.25}L0 ${h*.5}" ${L}/>`;
+   case 'trap': return `<path d="M${w*.25} 0L${w*.75} 0L${w} ${h}L0 ${h}Z" ${P}/>`;
+   case 'halfmoon': return `<path d="M0 ${h}A${w/2} ${h} 0 0 1 ${w} ${h}Z" ${P}/>`;
+   case 'kidney': return `<path d="M${w*.18} ${h*.08}C${w*.38} ${-h*.04} ${w*.42} ${h*.3} ${w*.5} ${h*.3}C${w*.58} ${h*.3} ${w*.62} ${-h*.04} ${w*.82} ${h*.08}C${w*1.04} ${h*.2} ${w*1.02} ${h} ${w*.7} ${h}L${w*.3} ${h}C${-w*.02} ${h} ${-w*.04} ${h*.2} ${w*.18} ${h*.08}Z" ${P}/>`;
+   case 'chair': return `<rect width="${w}" height="${h}" rx="${rr}" ${P}/><rect x="${w*.08}" y="0" width="${w*.84}" height="${h*.22}" rx="${h*.08}" fill="${dark}" stroke="${st}" stroke-width="${sw}"/>`;
+   case 'sofa': return `<rect width="${w}" height="${h}" rx="${rr*.6}" ${P}/><rect x="0" y="0" width="${w}" height="${h*.3}" rx="${rr*.5}" fill="${dark}" stroke="${st}" stroke-width="${sw}"/><rect x="0" y="0" width="${Math.min(w*.16,h*.4)}" height="${h}" rx="${rr*.5}" fill="${dark}" stroke="${st}" stroke-width="${sw}"/><rect x="${w-Math.min(w*.16,h*.4)}" y="0" width="${Math.min(w*.16,h*.4)}" height="${h}" rx="${rr*.5}" fill="${dark}" stroke="${st}" stroke-width="${sw}"/>`;
+   case 'shelf': { let s=`<rect width="${w}" height="${h}" ${P}/>`; const n=Math.max(1,Math.round(w/14)); for(let i=1;i<n;i++) s+=`<line x1="${w*i/n}" y1="${h*.15}" x2="${w*i/n}" y2="${h}" ${L}/>`; return s+`<line x1="0" y1="${h*.15}" x2="${w}" y2="${h*.15}" ${L}/>`;}
+   case 'bookdisplay': { let s=`<rect width="${w}" height="${h}" ${P}/>`; const n=Math.max(2,Math.round(w/9)); for(let i=0;i<n;i++) s+=`<rect x="${w*i/n+w*.015}" y="${h*.25}" width="${w/n-w*.03}" height="${h*.6}" fill="${lite}" stroke="${st}" stroke-width="${sw*.6}"/>`; return s;}
+   case 'cubby': { let s=`<rect width="${w}" height="${h}" ${P}/>`; const n=Math.max(1,Math.round(w/12)); for(let i=1;i<n;i++) s+=`<line x1="${w*i/n}" y1="0" x2="${w*i/n}" y2="${h}" ${L}/>`; for(let i=0;i<n;i++) s+=`<rect x="${w*i/n+w/n*.2}" y="${h*.3}" width="${w/n*.6}" height="${h*.5}" fill="${lite}" stroke="none"/>`; return s;}
+   case 'rack': { let s=`<rect width="${w}" height="${h}" ${P}/>`; for(let i=1;i<5;i++) s+=`<line x1="${w*.06}" y1="${h*i/5}" x2="${w*.94}" y2="${h*i/5}" ${L}/>`; return s;}
+   case 'easel': return `<path d="M${w*.2} 0L${w*.8} 0L${w} ${h}L0 ${h}Z" fill="${lite}" stroke="${st}" stroke-width="${sw}"/><line x1="${w*.1}" y1="${h*.5}" x2="${w*.9}" y2="${h*.5}" stroke="${st}" stroke-width="${sw*2}"/><rect x="${w*.2}" y="0" width="${w*.6}" height="${h*.12}" fill="${fill}" stroke="${st}" stroke-width="${sw}"/><rect x="0" y="${h*.88}" width="${w}" height="${h*.12}" fill="${fill}" stroke="${st}" stroke-width="${sw}"/>`;
+   case 'sandwater': return `<rect width="${w}" height="${h}" rx="${rr*.5}" fill="${shade(fill,-0.1)}" stroke="${st}" stroke-width="${sw}"/><rect x="${w*.06}" y="${h*.12}" width="${w*.42}" height="${h*.76}" rx="${rr*.4}" fill="#ecd59a" stroke="${st}" stroke-width="${sw*.6}"/><rect x="${w*.52}" y="${h*.12}" width="${w*.42}" height="${h*.76}" rx="${rr*.4}" fill="#bfe6fb" stroke="${st}" stroke-width="${sw*.6}"/>`;
+   case 'stove': return `<rect width="${w}" height="${h}" ${P}/>`+[[.28,.35],[.72,.35],[.28,.72],[.72,.72]].map(([a,b])=>`<circle cx="${w*a}" cy="${h*b}" r="${Math.min(w,h)*.16}" fill="#555" stroke="${st}" stroke-width="${sw*.5}"/>`).join('');
+   case 'sink': return `<rect width="${w}" height="${h}" rx="${rr*.4}" ${P}/><ellipse cx="${w/2}" cy="${h*.58}" rx="${w*.32}" ry="${h*.3}" fill="#d9eef9" stroke="${st}" stroke-width="${sw}"/><circle cx="${w/2}" cy="${h*.14}" r="${Math.min(w,h)*.06}" fill="${st}"/>`;
+   case 'fridge': return `<rect width="${w}" height="${h}" rx="${rr*.3}" ${P}/><line x1="${w*.45}" y1="0" x2="${w*.45}" y2="${h}" ${L}/><line x1="${w*.1}" y1="${h*.85}" x2="${w*.35}" y2="${h*.85}" ${L}/>`;
+   case 'kitchenset': return [0,1/3,2/3].map((o,i)=>`<g transform="translate(${w*o} 0)">${drawShape(['stove','sink','fridge'][i],w/3,h,fill)}</g>`).join('');
+   case 'crib': { let s=`<rect width="${w}" height="${h}" fill="${lite}" stroke="${st}" stroke-width="${sw*1.5}"/>`; for(let i=1;i<8;i++) s+=`<line x1="${w*i/8}" y1="0" x2="${w*i/8}" y2="${h*.12}" ${L}/><line x1="${w*i/8}" y1="${h*.88}" x2="${w*i/8}" y2="${h}" ${L}/>`; return s+`<rect x="${w*.08}" y="${h*.2}" width="${w*.84}" height="${h*.6}" rx="${rr}" fill="${fill}" stroke="none"/>`;}
+   case 'computer': return `<rect width="${w}" height="${h}" ${P}/><rect x="${w*.25}" y="${h*.08}" width="${w*.5}" height="${h*.18}" fill="#333a55"/><rect x="${w*.28}" y="${h*.45}" width="${w*.44}" height="${h*.2}" rx="${h*.03}" fill="${lite}" stroke="${st}" stroke-width="${sw*.5}"/>`;
+   case 'listen': return `<ellipse cx="${w/2}" cy="${h/2}" rx="${w/2}" ry="${h/2}" ${P}/><circle cx="${w/2}" cy="${h/2}" r="${Math.min(w,h)*.14}" fill="#333a55"/>`+[0,90,180,270].map(a=>{const t=a*Math.PI/180;return `<circle cx="${w/2+Math.cos(t)*w*.32}" cy="${h/2+Math.sin(t)*h*.32}" r="${Math.min(w,h)*.08}" fill="${lite}" stroke="${st}" stroke-width="${sw*.6}"/>`}).join('');
+   case 'puppet': return `<rect width="${w}" height="${h}" ${P}/><rect x="${w*.15}" y="${h*.25}" width="${w*.7}" height="${h*.5}" fill="${lite}" stroke="${st}" stroke-width="${sw*.6}"/>`;
+   case 'plant': return `<circle cx="${w/2}" cy="${h/2}" r="${Math.min(w,h)*.38}" fill="#b07a4a" stroke="${st}" stroke-width="${sw}"/>`+[0,72,144,216,288].map(a=>{const t=a*Math.PI/180;return `<ellipse cx="${w/2+Math.cos(t)*w*.22}" cy="${h/2+Math.sin(t)*h*.22}" rx="${w*.2}" ry="${h*.13}" transform="rotate(${a} ${w/2+Math.cos(t)*w*.22} ${h/2+Math.sin(t)*h*.22})" fill="${fill}" stroke="${st}" stroke-width="${sw*.6}"/>`}).join('');
+   case 'rug': return `<rect width="${w}" height="${h}" rx="${rr*.6}" ${P}/><rect x="${Math.min(w,h)*.06}" y="${Math.min(w,h)*.06}" width="${w-Math.min(w,h)*.12}" height="${h-Math.min(w,h)*.12}" rx="${rr*.4}" fill="none" stroke="${lite}" stroke-width="${sw}" stroke-dasharray="${sw*4} ${sw*3}"/>`;
+   case 'nook': return `<path d="M0 0L${w} 0A${w} ${h} 0 0 1 0 ${h}Z" ${P}/>`;
+   case 'zone': return `<rect width="${w}" height="${h}" fill="${fill}" fill-opacity="0.12" stroke="${fill}" stroke-width="${sw*1.5}" stroke-dasharray="${sw*6} ${sw*4}"/>`;
+   case 'desk': return `<rect width="${w}" height="${h}" ${P}/><rect x="${w*.62}" y="${h*.1}" width="${w*.32}" height="${h*.8}" fill="${dark}" stroke="${st}" stroke-width="${sw*.6}"/>`;
+   case 'door': return `<path d="M0 ${h}L0 0A${w} ${h} 0 0 1 ${w} ${h}Z" fill="${shade(fill,0.75)}" stroke="${st}" stroke-width="${sw*.6}" stroke-dasharray="${sw*3} ${sw*2}"/><rect x="0" y="0" width="${Math.max(1.5,w*.05)}" height="${h}" fill="${fill}" stroke="${st}" stroke-width="${sw*.6}"/>`;
+   case 'window': return `<rect width="${w}" height="${h}" fill="${fill}" stroke="${st}" stroke-width="${sw}"/><line x1="0" y1="${h/2}" x2="${w}" y2="${h/2}" ${L}/><line x1="${w/2}" y1="0" x2="${w/2}" y2="${h}" ${L}/>`;
+   case 'board': return `<rect width="${w}" height="${h}" fill="${fill}" stroke="${st}" stroke-width="${sw}"/>`;
+   case 'tableset': case 'tableset6': {
+     const per = shape==='tableset6'?3:2, cs=Math.min(14,h*.24), tw=w, th=h-cs*2-4, ty=cs+2; let s='';
+     for(let i=0;i<per;i++){const cx=tw*(i+.5)/per-cs/2; s+=`<g transform="translate(${cx} 0)">${drawShape('chair',cs,cs,shade(fill,-0.25))}</g><g transform="translate(${cx+cs} ${h}) rotate(180)">${drawShape('chair',cs,cs,shade(fill,-0.25))}</g>`;}
+     return s+`<rect x="0" y="${ty}" width="${tw}" height="${th}" ${P}/>`;}
+   default: return `<rect width="${w}" height="${h}" ${P}/>`;
+  }
+}
+
+/* ============ Rendering ============ */
+function labelBox(o){
+  const lines=String(o.text||' ').split('\n'); const s=o.size||8;
+  const w=Math.max(...lines.map(l=>l.length),2)*s*0.55+s*1.1, h=lines.length*s*1.25+s*0.7;
+  return {w,h,lines,s};
+}
+function itemSVG(o){
+  if(o.kind==='label'){
+    const {w,h,lines,s}=labelBox(o); let out='';
+    if(o.leader){ out+=`<line x1="${o.x}" y1="${o.y}" x2="${o.leader.x}" y2="${o.leader.y}" stroke="#222" stroke-width="${Math.max(.6,s*.09)}"/><circle cx="${o.leader.x}" cy="${o.leader.y}" r="${Math.max(1,s*.18)}" fill="#222"/>`; }
+    out+=`<g data-id="${o.id}">`;
+    if(o.box!==false) out+=`<rect x="${o.x-w/2}" y="${o.y-h/2}" width="${w}" height="${h}" fill="${o.bg||'#ffffff'}" stroke="#222" stroke-width="${Math.max(.5,s*.08)}"/>`;
+    else out+=`<rect x="${o.x-w/2}" y="${o.y-h/2}" width="${w}" height="${h}" fill="transparent"/>`;
+    lines.forEach((ln,i)=>{ out+=`<text x="${o.x}" y="${o.y-h/2+s*0.35+s*1.25*(i+0.5)+s*0.33}" font-size="${s}" font-family="${FONT}" text-anchor="middle" fill="${o.color||'#111'}"${o.bold?' font-weight="bold"':''}>${esc(ln)}</text>`; });
+    return out+'</g>';
+  }
+  const t=BYTYPE[o.type]||{shape:'rect'};
+  let s=`<g data-id="${o.id}" transform="translate(${o.x} ${o.y}) rotate(${o.rot||0} ${o.w/2} ${o.h/2})">`+drawShape(o.shape||t.shape,o.w,o.h,o.color);
+  if(o.showName && o.name){
+    const fs=Math.max(3,Math.min(9,Math.min(o.w,o.h)*0.32,o.w/Math.max(4,o.name.length)*1.7));
+    const flip = (((o.rot||0)%360)+360)%360; const up = flip>90&&flip<270 ? ` transform="rotate(180 ${o.w/2} ${o.h/2})"`:'';
+    const col = (o.shape||t.shape)==='zone' ? shade(o.color,-0.5) : (isDark(o.color)?'#fff':'#111');
+    s+=`<text x="${o.w/2}" y="${o.h/2+fs*0.35}" font-size="${fs.toFixed(2)}" font-family="${FONT}" text-anchor="middle" fill="${col}"${up}>${esc(o.name)}</text>`;
+  }
+  return s+'</g>';
+}
+function roomSVG(forExport){
+  const {w,h}=state.room; let s=`<rect x="-6" y="-6" width="${w+12}" height="${h+12}" fill="#555b75"/><rect x="0" y="0" width="${w}" height="${h}" fill="#f6f7fd"/>`;
+  if(showGrid){ let g=''; for(let x=12;x<w;x+=12) g+=`M${x} 0V${h}`; for(let y=12;y<h;y+=12) g+=`M0 ${y}H${w}`; s+=`<path d="${g}" stroke="#c9cde3" stroke-width="0.5" fill="none"/>`; }
+  const fs=9;
+  s+=`<text x="0" y="${-10}" font-size="${fs*0.8}" font-family="${FONT}" fill="#555b75">${fmtFt(w)} × ${fmtFt(h)}</text>`;
+  return s;
+}
+let showGrid=true;
+function render(){
+  $('#lRoom').innerHTML=roomSVG();
+  // zones & rugs first so they sit under furniture (keep user order otherwise)
+  $('#lItems').innerHTML=state.items.map(itemSVG).join('');
+  renderSel();
+  const svg=$('#canvas'); svg.setAttribute('viewBox',`${view.x} ${view.y} ${view.w} ${view.h}`);
+  $('#bUndo').disabled=hpos<=0; $('#bRedo').disabled=hpos>=hist.length-1;
+}
+function pxScale(){const ctm=$('#canvas').getScreenCTM();return ctm?1/ctm.a:1}
+function renderSel(){
+  const o=sel&&byId(sel); const L=$('#lSel'); if(!o){L.innerHTML='';return}
+  const k=pxScale(), hs=9*k;
+  if(o.kind==='label'){
+    const {w,h}=labelBox(o);
+    let s=`<rect x="${o.x-w/2-2*k}" y="${o.y-h/2-2*k}" width="${w+4*k}" height="${h+4*k}" fill="none" stroke="#2f43b8" stroke-width="${1.5*k}" stroke-dasharray="${5*k} ${3*k}" pointer-events="none"/>`;
+    if(o.leader) s+=`<circle data-h="leader" cx="${o.leader.x}" cy="${o.leader.y}" r="${hs}" fill="#ff7a00" stroke="#fff" stroke-width="${2*k}" style="cursor:move"/>`;
+    L.innerHTML=s; return;
+  }
+  const cx=o.x+o.w/2, cy=o.y+o.h/2;
+  L.innerHTML=`<g transform="rotate(${o.rot||0} ${cx} ${cy})">
+   <rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="#2f43b8" stroke-width="${1.5*k}" stroke-dasharray="${5*k} ${3*k}" pointer-events="none"/>
+   <line x1="${cx}" y1="${o.y}" x2="${cx}" y2="${o.y-28*k}" stroke="#2f43b8" stroke-width="${1.5*k}" pointer-events="none"/>
+   <circle data-h="rot" cx="${cx}" cy="${o.y-28*k}" r="${hs}" fill="#fff" stroke="#2f43b8" stroke-width="${2*k}" style="cursor:grab"/>
+   <text x="${cx}" y="${o.y-28*k+4*k}" font-size="${11*k}" text-anchor="middle" fill="#2f43b8" pointer-events="none">⟳</text>
+   <rect data-h="size" x="${o.x+o.w-hs}" y="${o.y+o.h-hs}" width="${hs*2}" height="${hs*2}" fill="#2f43b8" stroke="#fff" stroke-width="${2*k}" style="cursor:nwse-resize"/>
+  </g>`;
+}
+
+/* ============ History & storage ============ */
+function commit(){
+  const snap=JSON.stringify(state);
+  if(hist[hpos]===snap) return;
+  hist=hist.slice(0,hpos+1); hist.push(snap); if(hist.length>150) hist.shift(); hpos=hist.length-1;
+  try{localStorage.setItem(STORE,snap)}catch(e){}
+  render();
+}
+function undo(){ if(hpos>0){hpos--; state=JSON.parse(hist[hpos]); if(sel&&!byId(sel))sel=null; save(); render(); renderProps();} }
+function redo(){ if(hpos<hist.length-1){hpos++; state=JSON.parse(hist[hpos]); if(sel&&!byId(sel))sel=null; save(); render(); renderProps();} }
+function save(){try{localStorage.setItem(STORE,JSON.stringify(state))}catch(e){}}
+function load(s){ state=Object.assign(blankState(),s); state.items=state.items||[]; state.nextId=Math.max(state.nextId||1,...state.items.map(o=>o.id+1),1); sel=null; hist=[JSON.stringify(state)]; hpos=0; save(); fit(); render(); renderProps(); }
+
+/* ============ Item ops ============ */
+function addItem(type,at){
+  const t=BYTYPE[type]; const c=at||{x:view.x+view.w/2,y:view.y+view.h/2};
+  const o={id:state.nextId++,kind:'item',type,name:t.name.replace(/ \d+["×].*$|\s\d+×\d+$/,''),x:Math.round(c.x-t.w/2),y:Math.round(c.y-t.h/2),w:t.w,h:t.h,rot:0,color:t.color,showName:false};
+  if(['rug_big','calm','zone','bathroom'].includes(type)) o.showName=true;
+  // rugs/zones go under existing items
+  if(['rug','zone','nook','ellipse'].includes(t.shape) && /rug|zone|calm|bathroom/.test(type)) state.items.unshift(o); else state.items.push(o);
+  sel=o.id; commit(); renderProps(); closeSheets();
+}
+function addLabel(text,pos,leader){
+  const c=pos||{x:view.x+view.w/2,y:view.y+view.h/2};
+  const o={id:state.nextId++,kind:'label',text:text||'Label',x:Math.round(c.x),y:Math.round(c.y),size:8,color:'#111111',bg:'#ffffff',box:true,bold:false,leader:leader||null};
+  state.items.push(o); sel=o.id; commit(); renderProps();
+  setTimeout(()=>{const t=$('#pText'); if(t){t.focus(); t.select();}},30);
+}
+function duplicate(){ const o=byId(sel); if(!o) return; const c=JSON.parse(JSON.stringify(o)); c.id=state.nextId++; c.x+=12; c.y+=12; if(c.leader){c.leader.x+=12;c.leader.y+=12} state.items.push(c); sel=c.id; commit(); renderProps(); }
+function del(){ if(!sel) return; state.items=state.items.filter(o=>o.id!==sel); sel=null; commit(); renderProps(); }
+function order(front){ const i=state.items.findIndex(o=>o.id===sel); if(i<0)return; const [o]=state.items.splice(i,1); front?state.items.push(o):state.items.unshift(o); commit(); }
+function rotateBy(d){ const o=byId(sel); if(!o||o.kind==='label') return; o.rot=((Math.round((o.rot||0)+d)%360)+360)%360; commit(); renderProps(); }
+function labelFor(){
+  const o=byId(sel); if(!o||o.kind==='label') return;
+  const cx=o.x+o.w/2, cy=o.y+o.h/2, R=state.room;
+  // place label outside the nearest wall
+  const d={l:cx,r:R.w-cx,t:cy,b:R.h-cy}; const m=Object.entries(d).sort((a,b)=>a[1]-b[1])[0][0];
+  const pos = m==='l'?{x:-40,y:cy}: m==='r'?{x:R.w+40,y:cy}: m==='t'?{x:cx,y:-26}:{x:cx,y:R.h+26};
+  addLabel(o.name||'Label',pos,{x:Math.round(cx),y:Math.round(cy)});
+}
+
+/* ============ Palette ============ */
+function buildPalette(filter=''){
+  const f=filter.trim().toLowerCase(); let html='';
+  CATALOG.forEach(([cat,list],ci)=>{
+    const items=list.filter(i=>!f||i[1].toLowerCase().includes(f)||cat.toLowerCase().includes(f)); if(!items.length) return;
+    html+=`<details class="cat" ${f||ci<2?'open':''}><summary>${cat}</summary><div class="grid">`+items.map(([type,name,shape,w,h,color])=>{
+      const pad=Math.max(w,h)*0.08; return `<div class="tile" data-type="${type}" title="${esc(name)} (${fmtIn(w)} × ${fmtIn(h)})"><svg viewBox="${-pad} ${-pad} ${w+pad*2} ${h+pad*2}">${drawShape(shape,w,h,color)}</svg>${esc(name)}<small>${fmtIn(w)} × ${fmtIn(h)}</small></div>`}).join('')+`</div></details>`;
+  });
+  $('#cats').innerHTML=html||'<p class="muted">No matches. Try “Basic Shapes” for a custom item.</p>';
+}
+
+/* ============ Properties panel ============ */
+function num(id,val,step=1){return `<input id="${id}" type="number" step="${step}" value="${val}">`}
+function renderProps(){
+  const P=$('#props'); const o=sel&&byId(sel);
+  if(!o){
+    const R=state.room;
+    P.innerHTML=`<h2>Classroom</h2>
+     <label class="field">Classroom name<input id="pName" value="${esc(state.name)}"></label>
+     <label class="field">Teacher / student name<input id="pTeacher" value="${esc(state.teacher)}"></label>
+     <h3>Room size</h3>
+     <div class="field">Width<div class="row">${num('pRW',Math.floor(R.w/12))}<span class="unit">ft</span>${num('pRWi',R.w%12)}<span class="unit">in</span></div></div>
+     <div class="field">Length<div class="row">${num('pRL',Math.floor(R.h/12))}<span class="unit">ft</span>${num('pRLi',R.h%12)}<span class="unit">in</span></div></div>
+     <label class="check"><input type="checkbox" id="pGrid" ${showGrid?'checked':''}> Show 1-ft grid</label>
+     <label class="field">Notes (included in Word export)<textarea id="pNotes" rows="4">${esc(state.notes)}</textarea></label>
+     <h3>Word export</h3>
+     <label class="check"><input type="checkbox" id="pLand" ${state.landscape?'checked':''}> Landscape page (bigger floor plan)</label>
+     <label class="check"><input type="checkbox" id="pList" ${state.noList?'':'checked'}> Include furniture list</label>
+     <h3>Tips</h3>
+     <p class="muted">Tap any item to edit it. Select furniture and use <b>“Add label pointing here”</b> to make callout labels like the Lakeshore sample. Your work saves automatically in this browser; use <b>Save file</b> to keep a copy.</p>
+     <p class="muted">Keys: Delete · Ctrl+D duplicate · Ctrl+Z undo · R rotate · arrows nudge</p>
+     <div class="btns"><button id="pSample">Load pre-K example</button></div>`;
+    const set=(k,v)=>{state[k]=v; save(); hist[hpos]=JSON.stringify(state)};
+    $('#pName').oninput=e=>set('name',e.target.value);
+    $('#pTeacher').oninput=e=>set('teacher',e.target.value);
+    $('#pNotes').oninput=e=>set('notes',e.target.value);
+    const room=()=>{const w=(+$('#pRW').value||0)*12+(+$('#pRWi').value||0), h=(+$('#pRL').value||0)*12+(+$('#pRLi').value||0); if(w>=60&&h>=60&&w<=2400&&h<=2400){state.room={w,h}; commit(); fit();}};
+    ['pRW','pRWi','pRL','pRLi'].forEach(id=>$('#'+id).onchange=room);
+    $('#pGrid').onchange=e=>{showGrid=e.target.checked; render()};
+    $('#pLand').onchange=e=>set('landscape',e.target.checked);
+    $('#pList').onchange=e=>set('noList',!e.target.checked);
+    $('#pSample').onclick=()=>{ if(!state.items.length||confirm('Replace your layout with the pre-K example?')) load(sampleLayout()); };
+    return;
+  }
+  if(o.kind==='label'){
+    P.innerHTML=`<h2>Text label</h2>
+     <label class="field">Text (Enter for a new line)<textarea id="pText" rows="3">${esc(o.text)}</textarea></label>
+     <div class="field">Text size<div class="row"><input id="pSize" type="range" min="4" max="30" step="0.5" value="${o.size}"><span class="unit" id="pSizeV">${o.size}</span></div></div>
+     <div class="row"><label class="field">Text color<input id="pColor" type="color" value="${o.color||'#111111'}"></label><label class="field">Box color<input id="pBg" type="color" value="${o.bg||'#ffffff'}"></label></div>
+     <label class="check"><input type="checkbox" id="pBox" ${o.box!==false?'checked':''}> Show box</label>
+     <label class="check"><input type="checkbox" id="pBold" ${o.bold?'checked':''}> Bold</label>
+     <label class="check"><input type="checkbox" id="pLeader" ${o.leader?'checked':''}> Pointer line (drag the orange dot)</label>
+     <div class="btns"><button id="pDup">Duplicate</button><button id="pFront">To front</button><button id="pDel" class="danger">Delete</button></div>
+     <div class="btns"><button id="pDone" class="primary">Done</button></div>`;
+    $('#pText').oninput=e=>{o.text=e.target.value; render(); save()}; $('#pText').onchange=commit;
+    $('#pSize').oninput=e=>{o.size=+e.target.value; $('#pSizeV').textContent=o.size; render()}; $('#pSize').onchange=commit;
+    $('#pColor').oninput=e=>{o.color=e.target.value; render()}; $('#pColor').onchange=commit;
+    $('#pBg').oninput=e=>{o.bg=e.target.value; render()}; $('#pBg').onchange=commit;
+    $('#pBox').onchange=e=>{o.box=e.target.checked; commit()};
+    $('#pBold').onchange=e=>{o.bold=e.target.checked; commit()};
+    $('#pLeader').onchange=e=>{o.leader=e.target.checked?{x:o.x+40,y:o.y+30}:null; commit()};
+  } else {
+    P.innerHTML=`<h2>${esc((BYTYPE[o.type]||{}).name||'Item')}</h2>
+     <label class="field">Name<input id="pIName" value="${esc(o.name||'')}"></label>
+     <label class="check"><input type="checkbox" id="pShow" ${o.showName?'checked':''}> Show name on the item</label>
+     <div class="field">Size (inches) — ${fmtIn(o.w)} × ${fmtIn(o.h)}<div class="row">${num('pW',r1(o.w))}<span class="unit">×</span>${num('pH',r1(o.h))}</div></div>
+     <div class="field">Rotation<div class="row"><button id="pRL90">⟲ 90°</button>${num('pRot',Math.round(o.rot||0),15)}<button id="pRR90">⟳ 90°</button></div></div>
+     <label class="field">Color<input id="pIColor" type="color" value="${o.color}"></label>
+     <div class="btns"><button id="pLbl" class="primary">🏷️ Add label pointing here</button></div>
+     <div class="btns"><button id="pDup">Duplicate</button><button id="pFront">To front</button><button id="pBack">To back</button><button id="pDel" class="danger">Delete</button></div>
+     <div class="btns"><button id="pDone">Done</button></div>`;
+    $('#pIName').oninput=e=>{o.name=e.target.value; render(); save()}; $('#pIName').onchange=commit;
+    $('#pShow').onchange=e=>{o.showName=e.target.checked; commit()};
+    const sz=()=>{const w=+$('#pW').value,h=+$('#pH').value; if(w>=2&&h>=2){const cx=o.x+o.w/2,cy=o.y+o.h/2; o.w=w;o.h=h;o.x=cx-w/2;o.y=cy-h/2; commit(); renderProps();}};
+    $('#pW').onchange=sz; $('#pH').onchange=sz;
+    $('#pRot').onchange=e=>{o.rot=((+e.target.value%360)+360)%360; commit()};
+    $('#pRL90').onclick=()=>rotateBy(-90); $('#pRR90').onclick=()=>rotateBy(90);
+    $('#pIColor').oninput=e=>{o.color=e.target.value; render()}; $('#pIColor').onchange=commit;
+    $('#pLbl').onclick=labelFor; $('#pBack').onclick=()=>order(false);
+  }
+  $('#pDup').onclick=duplicate; $('#pDel').onclick=del; $('#pFront').onclick=()=>order(true);
+  $('#pDone').onclick=()=>{sel=null; render(); renderProps(); closeSheets()};
+}
+
+/* ============ Canvas interaction ============ */
+const svg=$('#canvas');
+function pt(e){const p=svg.createSVGPoint(); p.x=e.clientX; p.y=e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse())}
+const sn=v=>snap?Math.round(v):r1(v);
+let drag=null; const pointers=new Map();
+svg.addEventListener('pointerdown',e=>{
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  try{svg.setPointerCapture(e.pointerId)}catch(_){}
+  if(pointers.size===2){ const [a,b]=[...pointers.values()]; if(drag&&drag.moved) commit(); drag={mode:'pinch',d:Math.hypot(a.x-b.x,a.y-b.y)||1,v:{...view},c:pt({clientX:(a.x+b.x)/2,clientY:(a.y+b.y)/2})}; return; }
+  if(pointers.size>2) return;
+  const p=pt(e); const h=e.target.dataset&&e.target.dataset.h; const cur=sel&&byId(sel);
+  if(h&&cur){
+    if(h==='size'){ const th=(cur.rot||0)*Math.PI/180, c=Math.cos(th), s=Math.sin(th), cx=cur.x+cur.w/2, cy=cur.y+cur.h/2;
+      drag={mode:'size',o:cur,th,ax:cx-(cur.w/2)*c+(cur.h/2)*s,ay:cy-(cur.w/2)*s-(cur.h/2)*c,moved:false};
+    } else if(h==='rot') drag={mode:'rot',o:cur,cx:cur.x+cur.w/2,cy:cur.y+cur.h/2,moved:false};
+    else if(h==='leader') drag={mode:'leader',o:cur,moved:false};
+    return;
+  }
+  const g=e.target.closest&&e.target.closest('[data-id]');
+  if(g){ const id=+g.dataset.id, o=byId(id); if(!o) return; const changed=sel!==id; sel=id; if(changed) renderProps();
+    drag={mode:'move',o,sx:p.x,sy:p.y,ox:o.x,oy:o.y,moved:false,cx:e.clientX,cy:e.clientY}; render(); return; }
+  if(sel){ sel=null; renderProps(); render(); }
+  drag={mode:'pan',cx:e.clientX,cy:e.clientY,v:{...view},k:pxScale()};
+});
+svg.addEventListener('pointermove',e=>{
+  if(pointers.has(e.pointerId)) pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(!drag) return;
+  if(drag.mode==='pinch'){ if(pointers.size<2) return; const [a,b]=[...pointers.values()]; const f=drag.d/(Math.hypot(a.x-b.x,a.y-b.y)||1); const v=drag.v,c=drag.c; const nw=v.w*f; if(nw<40||nw>8000) return; view={x:c.x-(c.x-v.x)*f,y:c.y-(c.y-v.y)*f,w:nw,h:v.h*f}; render(); return; }
+  if(drag.mode==='pan'){ view.x=drag.v.x-(e.clientX-drag.cx)*drag.k; view.y=drag.v.y-(e.clientY-drag.cy)*drag.k; svg.setAttribute('viewBox',`${view.x} ${view.y} ${view.w} ${view.h}`); return; }
+  const p=pt(e), o=drag.o;
+  if(drag.mode==='move'){ if(!drag.moved && Math.hypot(e.clientX-drag.cx,e.clientY-drag.cy)<4) return; o.x=sn(drag.ox+p.x-drag.sx); o.y=sn(drag.oy+p.y-drag.sy); }
+  else if(drag.mode==='size'){ const c=Math.cos(drag.th),s=Math.sin(drag.th),dx=p.x-drag.ax,dy=p.y-drag.ay;
+    const lw=Math.max(2,sn(dx*c+dy*s)), lh=Math.max(2,sn(-dx*s+dy*c));
+    const ncx=drag.ax+(lw/2)*c-(lh/2)*s, ncy=drag.ay+(lw/2)*s+(lh/2)*c; o.w=lw;o.h=lh;o.x=ncx-lw/2;o.y=ncy-lh/2; }
+  else if(drag.mode==='rot'){ let a=Math.atan2(p.y-drag.cy,p.x-drag.cx)*180/Math.PI+90; a=e.shiftKey?Math.round(a):Math.round(a/15)*15; o.rot=((a%360)+360)%360; }
+  else if(drag.mode==='leader'){ o.leader={x:sn(p.x),y:sn(p.y)}; }
+  drag.moved=true; render();
+});
+function endPtr(e){
+  pointers.delete(e.pointerId);
+  if(!drag) return;
+  if(drag.mode==='pinch'){ if(!pointers.size) drag=null; return; }
+  const d=drag; drag=null;
+  if(d.moved && d.mode!=='pan'){ commit(); if(d.mode!=='move') renderProps(); }
+  else if(d.mode==='move' && !d.moved && innerWidth<=860) $('#props').classList.add('open');
+}
+svg.addEventListener('pointerup',endPtr); svg.addEventListener('pointercancel',endPtr);
+svg.addEventListener('wheel',e=>{e.preventDefault(); zoomAt(pt(e),Math.exp(e.deltaY*(e.ctrlKey?0.01:0.0015)))},{passive:false});
+function zoomAt(p,f){ const nw=view.w*f; if(nw<40||nw>8000) return; view={x:p.x-(p.x-view.x)*f,y:p.y-(p.y-view.y)*f,w:nw,h:view.h*f}; render(); }
+function zoomBtn(f){ zoomAt({x:view.x+view.w/2,y:view.y+view.h/2},f) }
+
+/* ============ Bounds / fit ============ */
+function itemBounds(o){
+  if(o.kind==='label'){ const {w,h}=labelBox(o); const b={x0:o.x-w/2,y0:o.y-h/2,x1:o.x+w/2,y1:o.y+h/2}; if(o.leader){b.x0=Math.min(b.x0,o.leader.x);b.y0=Math.min(b.y0,o.leader.y);b.x1=Math.max(b.x1,o.leader.x);b.y1=Math.max(b.y1,o.leader.y);} return b; }
+  const th=(o.rot||0)*Math.PI/180, c=Math.abs(Math.cos(th)), s=Math.abs(Math.sin(th)), cx=o.x+o.w/2, cy=o.y+o.h/2, hw=(o.w*c+o.h*s)/2, hh=(o.w*s+o.h*c)/2;
+  return {x0:cx-hw,y0:cy-hh,x1:cx+hw,y1:cy+hh};
+}
+function contentBounds(){ const b={x0:-24,y0:-24,x1:state.room.w+8,y1:state.room.h+8}; state.items.forEach(o=>{const i=itemBounds(o); b.x0=Math.min(b.x0,i.x0);b.y0=Math.min(b.y0,i.y0);b.x1=Math.max(b.x1,i.x1);b.y1=Math.max(b.y1,i.y1)}); return b; }
+function fit(){ const b=contentBounds(), r=svg.getBoundingClientRect(), cw=r.width||800, ch=r.height||600; let w=b.x1-b.x0+30, h=b.y1-b.y0+30; if(w/h<cw/ch) w=h*cw/ch; else h=w*ch/cw; view={x:(b.x0+b.x1)/2-w/2,y:(b.y0+b.y1)/2-h/2,w,h}; render(); }
+addEventListener('resize',()=>{ const r=svg.getBoundingClientRect(); if(r.width&&r.height){ const cy=view.y+view.h/2; view.h=view.w*r.height/r.width; view.y=cy-view.h/2; render(); } });
+
+/* ============ Palette events (tap to add, or drag onto plan) ============ */
+let pdrag=null;
+$('#cats').addEventListener('pointerdown',e=>{ const t=e.target.closest('.tile'); if(!t) return; pdrag={type:t.dataset.type,x:e.clientX,y:e.clientY,moved:false}; });
+document.addEventListener('pointermove',e=>{ if(pdrag&&Math.hypot(e.clientX-pdrag.x,e.clientY-pdrag.y)>8){ pdrag.moved=true; document.body.style.cursor='copy'; } });
+document.addEventListener('pointerup',e=>{
+  if(!pdrag) return; const d=pdrag; pdrag=null; document.body.style.cursor='';
+  if(!d.moved) return addItem(d.type);
+  const el=document.elementFromPoint(e.clientX,e.clientY); if(el&&svg.contains(el)){ const p=pt(e); addItem(d.type,{x:p.x,y:p.y}); }
+});
+$('#search').oninput=e=>buildPalette(e.target.value);
+
+/* ============ Keyboard ============ */
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,textarea,select')) return;
+  const mod=e.ctrlKey||e.metaKey, k=e.key.toLowerCase();
+  if(mod&&k==='z'){e.preventDefault(); e.shiftKey?redo():undo(); return}
+  if(mod&&k==='y'){e.preventDefault(); redo(); return}
+  if(mod&&k==='d'){e.preventDefault(); duplicate(); return}
+  if(mod&&k==='s'){e.preventDefault(); saveFile(); return}
+  if(!sel) return; const o=byId(sel); if(!o) return;
+  if(k==='delete'||k==='backspace'){e.preventDefault(); del()}
+  else if(k==='r'&&!mod){rotateBy(e.shiftKey?-90:90)}
+  else if(k==='escape'){sel=null; render(); renderProps()}
+  else if(k.startsWith('arrow')){ e.preventDefault(); const d=e.shiftKey?12:1; if(k==='arrowleft')o.x-=d; if(k==='arrowright')o.x+=d; if(k==='arrowup')o.y-=d; if(k==='arrowdown')o.y+=d; commit(); }
+});
+
+/* ============ Export ============ */
+function download(blob,name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove()},1500); }
+const fileBase=()=>(state.name||'classroom').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'_')||'classroom';
+function exportSVG(){
+  const b=contentBounds(), pad=12; const x=b.x0-pad,y=b.y0-pad,w=b.x1-b.x0+pad*2,h=b.y1-b.y0+pad*2;
+  return {w,h,svg:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${w} ${h}" width="${w}" height="${h}"><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#ffffff"/>${roomSVG(true)}${state.items.map(itemSVG).join('')}</svg>`};
+}
+async function toPng(maxW=2200){
+  const {svg:s,w,h}=exportSVG(), scale=maxW/w, img=new Image(), url=URL.createObjectURL(new Blob([s],{type:'image/svg+xml;charset=utf-8'}));
+  await new Promise((res,rej)=>{img.onload=res; img.onerror=()=>rej(new Error('Could not draw the floor plan')); img.src=url});
+  const c=document.createElement('canvas'); c.width=Math.round(w*scale); c.height=Math.round(h*scale);
+  const ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
+  const blob=await new Promise(r=>c.toBlob(r,'image/png')); return {blob,w:c.width,h:c.height};
+}
+const fmtFt=n=>`${Math.floor(n/12)}' ${n%12}"`;
+async function buildDocx(){
+  const D=window.docx; if(!D) throw new Error('Word export library did not load');
+  const {blob,w,h}=await toPng(2200); const data=new Uint8Array(await blob.arrayBuffer());
+  const land=!!state.landscape, maxW=land?950:715, maxH=land?560:760; let iw=maxW, ih=iw*h/w; if(ih>maxH){ih=maxH; iw=ih*w/h}
+  const R=state.room, kids=[], P=(t,o={})=>new D.Paragraph({...o,children:[new D.TextRun({text:t,...(o.run||{})})]});
+  kids.push(new D.Paragraph({heading:D.HeadingLevel.TITLE,children:[new D.TextRun(state.name||'Classroom Layout')]}));
+  if(state.teacher) kids.push(P('Prepared by: '+state.teacher,{run:{size:22}}));
+  kids.push(P(`Room size: ${fmtFt(R.w)} × ${fmtFt(R.h)} (${Math.round(R.w*R.h/144)} sq ft)`,{run:{size:22,color:'444444'}}));
+  kids.push(new D.Paragraph({alignment:D.AlignmentType.CENTER,spacing:{before:160,after:160},children:[new D.ImageRun({type:'png',data,transformation:{width:Math.round(iw),height:Math.round(ih)},altText:{title:'Floor plan',description:'Classroom floor plan for '+(state.name||'classroom'),name:'floorplan'}})]}));
+  const labels=state.items.filter(o=>o.kind==='label'&&String(o.text).trim());
+  if(labels.length){
+    kids.push(new D.Paragraph({heading:D.HeadingLevel.HEADING_2,pageBreakBefore:land,children:[new D.TextRun('Learning Centers & Areas')]}));
+    labels.forEach(l=>kids.push(new D.Paragraph({bullet:{level:0},children:[new D.TextRun(String(l.text).replace(/\s*\n\s*/g,' '))]})));
+  }
+  if(!state.noList){
+    const groups={}; state.items.filter(o=>o.kind!=='label').forEach(o=>{const n=(o.name||(BYTYPE[o.type]||{}).name||'Item').trim(); const sz=`${fmtIn(o.w)} × ${fmtIn(o.h)}`; const key=n+'|'+sz; (groups[key]=groups[key]||{n,sz,q:0}).q++});
+    const rows=Object.values(groups).sort((a,b)=>a.n.localeCompare(b.n));
+    if(rows.length){
+      const cell=(t,bold,shade)=>new D.TableCell({shading:shade?{fill:'E8ECFF',type:D.ShadingType.CLEAR,color:'auto'}:undefined,margins:{top:60,bottom:60,left:100,right:100},children:[new D.Paragraph({children:[new D.TextRun({text:String(t),bold})]})]});
+      kids.push(new D.Paragraph({heading:D.HeadingLevel.HEADING_2,spacing:{before:240},children:[new D.TextRun('Furniture & Materials')]}));
+      kids.push(new D.Table({width:{size:100,type:D.WidthType.PERCENTAGE},rows:[
+        new D.TableRow({tableHeader:true,children:[cell('Item',true,true),cell('Size (W × D)',true,true),cell('Qty',true,true)]}),
+        ...rows.map(r=>new D.TableRow({children:[cell(r.n),cell(r.sz),cell(r.q)]}))]}));
+    }
+  }
+  if(state.notes&&state.notes.trim()){
+    kids.push(new D.Paragraph({heading:D.HeadingLevel.HEADING_2,spacing:{before:240},children:[new D.TextRun('Notes')]}));
+    state.notes.split(/\n/).forEach(l=>kids.push(P(l)));
+  }
+  const doc=new D.Document({creator:state.teacher||'Classroom Designer',title:state.name||'Classroom Layout',
+    styles:{default:{document:{run:{font:'Calibri',size:22}}}},
+    sections:[{properties:{page:{size:{width:12240,height:15840,orientation:land?D.PageOrientation.LANDSCAPE:D.PageOrientation.PORTRAIT},margin:{top:720,bottom:720,left:720,right:720}}},children:kids}]});
+  return D.Packer.toBlob(doc);
+}
+async function exportWord(){ try{ toast('Building Word document…'); download(await buildDocx(),fileBase()+'.docx'); toast('Word document downloaded'); }catch(err){ console.error(err); toast('Export failed: '+err.message); } }
+async function exportPng(){ try{ const {blob}=await toPng(2400); download(blob,fileBase()+'.png'); toast('Image downloaded'); }catch(err){ toast('Export failed: '+err.message) } }
+function saveFile(){ download(new Blob([JSON.stringify(state,null,1)],{type:'application/json'}),fileBase()+'.classroom.json'); toast('Layout file saved'); }
+
+/* ============ Example layout (30' × 28' pre-K room) ============ */
+function sampleLayout(){
+  const s=blankState(); s.name='Pre-K Classroom'; s.room={w:360,h:336};
+  const A=(type,cx,cy,rot=0,ex={})=>{const t=BYTYPE[type]; const w=ex.w||t.w,h=ex.h||t.h; const o={id:s.nextId++,kind:'item',type,name:ex.name||t.name,x:cx-w/2,y:cy-h/2,w,h,rot,color:ex.color||t.color,showName:!!ex.show}; s.items.push(o); return o};
+  const Lb=(text,x,y,lx,ly)=>s.items.push({id:s.nextId++,kind:'label',text,x,y,size:7.5,color:'#111111',bg:'#ffffff',box:true,bold:false,leader:lx==null?null:{x:lx,y:ly}});
+  A('rug_big',196,62,0,{name:'Large group rug',show:true});
+  A('smartboard',196,3); A('window',3,90,90); A('window',3,170,90); A('window',3,250,90);
+  A('bookdisplay',112,20,90); A('beanbag',36,24); A('beanbag',72,24); A('sofa',54,62,0,{name:'Child sofa'});
+  A('writing',58,108,0,{name:'Writing center',show:true}); A('chair',46,128,180); A('chair',70,128,180);
+  A('lowshelf48',16,166,90,{name:'Manipulatives & blocks'}); A('rug_small',52,166,90,{name:'Block rug'});
+  A('science',16,214,90,{name:'Science table'}); A('dressup',16,258,90);
+  A('crib',22,312,0); A('highchair',52,316);
+  A('kitchenset',118,328,180); A('ptable',118,284,90,{name:'Play table & chairs'});
+  A('easel',178,322,180); A('round_36',214,294,0,{name:'Art table'}); A('chair',214,268); A('chair',236,294,90); A('chair',192,294,270); A('chair',214,320,180);
+  A('dryrack',250,328,180);
+  A('tableset',148,166); A('tableset',228,166); A('tableset',148,236,90); A('tableset',228,236,90);
+  A('tdesk',314,26); A('tchair',314,54,180); A('papers',284,64,0); A('computer',318,84,180,{name:'Technology center'});
+  A('listen',336,124); A('cubbies',351,186,90); A('cubbies',351,234,90);
+  A('sink',349,280,90); A('door',300,318,0);
+  Lb('Book storage',112,-26,112,20); Lb('Smart board',196,-26,196,4);
+  Lb('Teacher desk\nand storage',318,-30,314,26);
+  Lb('Child sofa &\n2 beanbags',-52,40,54,50); Lb('Writing\ncenter',-52,100,58,108);
+  Lb('Manipulatives\nand blocks',-52,162,16,166); Lb('Science\ncenter',-52,212,16,214);
+  Lb('Dress-up / dramatic\nplay storage',-62,256,16,258); Lb('Baby crib and\nhigh chair',-52,310,22,312);
+  Lb('Play kitchen and\ntable / chairs',118,362,118,328); Lb('Art center: table,\nchairs, and easel',212,362,214,300);
+  Lb('Door',300,362,300,318); Lb('Children\'s tables\nand chairs',188,200);
+  Lb('Technology\ncenter',410,84,318,84); Lb('Listening\ncenter',410,124,336,124);
+  Lb('Cubbies for the\nchildren',410,210,351,210); Lb('Sink',410,280,349,280);
+  return s;
+}
+
+/* ============ Wire up ============ */
+$('#bUndo').onclick=undo; $('#bRedo').onclick=redo;
+$('#bLabel').onclick=()=>addLabel('Label');
+$('#bWord').onclick=exportWord; $('#bPng').onclick=exportPng; $('#bSave').onclick=saveFile;
+$('#bOpen').onclick=()=>$('#fileIn').click();
+$('#fileIn').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return; try{ const s=JSON.parse(await f.text()); if(!s.room||!Array.isArray(s.items)) throw 0; load(s); toast('Layout opened'); }catch(_){ toast('That file is not a classroom layout') } };
+$('#bNew').onclick=()=>$('#dlgNew').showModal();
+$('#dnBlank').onclick=()=>{ $('#dlgNew').close(); load(blankState()); };
+$('#dnSample').onclick=()=>{ $('#dlgNew').close(); load(sampleLayout()); };
+$('#dnCancel').onclick=()=>$('#dlgNew').close();
+$('#bZoomIn').onclick=()=>zoomBtn(0.8); $('#bZoomOut').onclick=()=>zoomBtn(1.25); $('#bFit').onclick=fit;
+$('#bSnap').onclick=e=>{ snap=!snap; e.target.classList.toggle('on',snap); };
+$('#bPal').onclick=()=>{ $('#props').classList.remove('open'); $('#palette').classList.toggle('open'); };
+$('#bProps').onclick=()=>{ $('#palette').classList.remove('open'); $('#props').classList.toggle('open'); };
+function closeSheets(){ $('#palette').classList.remove('open'); $('#props').classList.remove('open'); }
+
+buildPalette();
+let saved=null; try{ saved=JSON.parse(localStorage.getItem(STORE)) }catch(_){}
+requestAnimationFrame(()=>{ if(saved&&saved.room) load(saved); else { load(sampleLayout()); toast('Example loaded — tap New for a blank room'); } });
+if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
